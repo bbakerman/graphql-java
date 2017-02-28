@@ -5,10 +5,6 @@ plugins {
 }
 
 apply plugin: 'java'
-apply plugin: 'maven'
-apply plugin: 'maven-publish'
-apply plugin: 'antlr'
-apply plugin: 'jacoco'
 
 sourceCompatibility = 1.6
 targetCompatibility = 1.6
@@ -17,52 +13,48 @@ version = releaseVersion ? releaseVersion : new SimpleDateFormat('yyyy-MM-dd\'T\
 group = 'com.graphql-java'
 
 
-repositories {
-    mavenCentral()
-}
+subprojects {
+    apply plugin: 'groovy'
+    apply plugin: 'maven'
+    apply plugin: 'maven-publish'
+    apply plugin: 'antlr'
+    apply plugin: 'jacoco'
 
-apply plugin: 'groovy'
+    repositories {
+        mavenCentral()
+    }
 
-jar {
-    from "LICENSE.md"
-}
+    dependencies {
+        compile 'org.antlr:antlr4-runtime:4.5.1'
+        compile 'org.slf4j:slf4j-api:1.7.12'
+        antlr "org.antlr:antlr4:4.5.1"
+        testCompile group: 'junit', name: 'junit', version: '4.11'
+        testCompile 'org.spockframework:spock-core:1.0-groovy-2.4'
+        testCompile 'org.codehaus.groovy:groovy-all:2.4.4'
+        testCompile 'cglib:cglib-nodep:3.1'
+        testCompile 'org.objenesis:objenesis:2.1'
+    }
 
-dependencies {
-    compile 'org.antlr:antlr4-runtime:4.5.1'
-    compile 'org.slf4j:slf4j-api:1.7.12'
-    antlr "org.antlr:antlr4:4.5.1"
-    testCompile group: 'junit', name: 'junit', version: '4.11'
-    testCompile 'org.spockframework:spock-core:1.0-groovy-2.4'
-    testCompile 'org.codehaus.groovy:groovy-all:2.4.4'
-    testCompile 'cglib:cglib-nodep:3.1'
-    testCompile 'org.objenesis:objenesis:2.1'
-}
+    task sourcesJar(type: Jar) {
+        dependsOn classes
+        classifier 'sources'
+        from sourceSets.main.allSource
+    }
 
-compileJava.source file("build/generated-src"), sourceSets.main.java
+    task javadocJar(type: Jar, dependsOn: javadoc) {
+        classifier = 'javadoc'
+        from javadoc.destinationDir
+    }
 
-generateGrammarSource {
-    maxHeapSize = "64m"
-    arguments += ["-visitor"]
-    outputDirectory = file("${project.buildDir}/generated-src/antlr/main/graphql/parser/antlr")
-}
+    artifacts {
+        archives sourcesJar
+        archives javadocJar
+    }
 
-task sourcesJar(type: Jar) {
-    dependsOn classes
-    classifier 'sources'
-    from sourceSets.main.allSource
-}
-
-task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
-    from javadoc.destinationDir
-}
-
-artifacts {
-    archives sourcesJar
-    archives javadocJar
 }
 
 allprojects {
+
     tasks.withType(Javadoc) {
         exclude('**/antlr/**')
     }
@@ -75,80 +67,13 @@ allprojects {
         }
     }
 
-}
-
-publishing {
-
-    publications {
-
-        graphqlJava(MavenPublication) {
-            version version
-            from components.java
-
-            artifact sourcesJar {
-                classifier "sources"
-            }
-            artifact javadocJar {
-                classifier "javadoc"
-            }
-            pom.withXml {
-                // The ANTLR-related code below--introdcued in `1ac98bf`--addresses an issue with
-                // the Gradle ANTLR plugin. `1ac98bf` can be reverted and this comment removed once
-                // that issue is fixed and Gradle upgraded. See https://goo.gl/L92KiF and https://goo.gl/FY0PVR.
-                Node pomNode = asNode()
-                pomNode.dependencies.'*'.findAll() {
-                    it.artifactId.text() == 'antlr4'
-                }.each() {
-                    it.parent().remove(it)
-                }
-                pomNode.children().last() + {
-                    resolveStrategy = Closure.DELEGATE_FIRST
-                    name 'graphql-java'
-                    description 'GraphqL Java'
-                    url "https://github.com/graphql-java/graphql-java"
-                    scm {
-                        url "https://github.com/graphql-java/graphql-java"
-                        connection "https://github.com/graphql-java/graphql-java"
-                        developerConnection "https://github.com/graphql-java/graphql-java"
-                    }
-                    licenses {
-                        license {
-                            name 'MIT'
-                            url 'https://github.com/graphql-java/graphql-java/blob/master/LICENSE.md'
-                            distribution 'repo'
-                        }
-                    }
-                    developers {
-                        developer {
-                            id 'andimarek'
-                            name 'Andreas Marek'
-                        }
-                    }
-                }
-            }
-        }
+    // all publish tasks depend on the build task
+    tasks.withType(PublishToMavenRepository) {
+        dependsOn build
     }
 }
 
 
-bintray {
-    user = System.env.BINTRAY_USER ?: project["bintray.user"]
-    key = System.env.BINTRAY_API_KEY ?: project["bintray.key"]
-    publications = ['graphqlJava']
-    publish = true
-    pkg {
-        repo = 'graphql-java'
-        name = 'graphql-java'
-        desc = 'GraphQL in Java'
-        licenses = ['MIT']
-        vcsUrl = 'https://github.com/graphql-java/graphql-java'
-    }
-}
-
-// all publish tasks depend on the build task
-tasks.withType(PublishToMavenRepository) {
-    dependsOn build
-}
 
 
 task wrapper(type: Wrapper) {

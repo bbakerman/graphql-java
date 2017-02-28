@@ -1,2 +1,6 @@
 rootProject.name = 'graphql-java'
+include 'api'
+findProject(':api')?.name = 'graphql-java-api'
+include 'execution'
+findProject(':execution')?.name = 'graphql-java-execution'
 
