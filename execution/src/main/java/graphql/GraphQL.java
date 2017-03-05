@@ -80,9 +80,9 @@ public class GraphQL {
     }
 
     private GraphQL(GraphQLSchema graphQLSchema, ExecutionStrategy queryStrategy, ExecutionStrategy mutationStrategy, ExecutionIdProvider idProvider) {
-        this.graphQLSchema = assertNotNull(graphQLSchema,"queryStrategy must be non null");
-        this.queryStrategy = assertNotNull(queryStrategy, "queryStrategy must be non null");
-        this.idProvider = assertNotNull(idProvider, "idProvider must be non null");
+        this.graphQLSchema = Assert.assertNotNull(graphQLSchema,"queryStrategy must be non null");
+        this.queryStrategy = Assert.assertNotNull(queryStrategy, "queryStrategy must be non null");
+        this.idProvider = Assert.assertNotNull(idProvider, "idProvider must be non null");
         this.mutationStrategy = mutationStrategy;
     }
 
@@ -110,22 +110,22 @@ public class GraphQL {
         }
 
         public Builder schema(GraphQLSchema graphQLSchema) {
-            this.graphQLSchema = assertNotNull(graphQLSchema, "GraphQLSchema must be non null");
+            this.graphQLSchema = Assert.assertNotNull(graphQLSchema, "GraphQLSchema must be non null");
             return this;
         }
 
         public Builder queryExecutionStrategy(ExecutionStrategy executionStrategy) {
-            this.queryExecutionStrategy = assertNotNull(executionStrategy, "Query ExecutionStrategy must be non null");
+            this.queryExecutionStrategy = Assert.assertNotNull(executionStrategy, "Query ExecutionStrategy must be non null");
             return this;
         }
 
         public Builder mutationExecutionStrategy(ExecutionStrategy executionStrategy) {
-            this.mutationExecutionStrategy = assertNotNull(executionStrategy, "Mutation ExecutionStrategy must be non null");
+            this.mutationExecutionStrategy = Assert.assertNotNull(executionStrategy, "Mutation ExecutionStrategy must be non null");
             return this;
         }
 
         public Builder executionIdProvider(ExecutionIdProvider executionIdProvider) {
-            this.idProvider = assertNotNull(executionIdProvider, "ExecutionIdProvider must be non null");
+            this.idProvider = Assert.assertNotNull(executionIdProvider, "ExecutionIdProvider must be non null");
             return this;
         }
 
@@ -151,7 +151,7 @@ public class GraphQL {
     }
 
     public ExecutionResult execute(String requestString, String operationName, Object context, Map<String, Object> arguments) {
-        assertNotNull(arguments, "arguments can't be null");
+        Assert.assertNotNull(arguments, "arguments can't be null");
         log.debug("Executing request. operation name: {}. Request: {} ", operationName, requestString);
         Parser parser = new Parser();
         Document document;

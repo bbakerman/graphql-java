@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static graphql.execution.TypeFromAST.getTypeFromAST;
+import static graphql.language.TypeFromAST.getTypeFromAST;
 
 public class FieldCollector {
 

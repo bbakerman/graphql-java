@@ -2,10 +2,10 @@ package graphql.validation.rules;
 
 
 import graphql.ShouldNotHappenException;
-import graphql.execution.TypeFromAST;
 import graphql.language.FragmentDefinition;
 import graphql.language.FragmentSpread;
 import graphql.language.InlineFragment;
+import graphql.language.TypeFromAST;
 import graphql.schema.*;
 import graphql.validation.*;
 

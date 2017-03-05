@@ -1,8 +1,8 @@
 package graphql.validation.rules;
 
 
-import graphql.execution.TypeFromAST;
 import graphql.language.OperationDefinition;
+import graphql.language.TypeFromAST;
 import graphql.language.VariableDefinition;
 import graphql.language.VariableReference;
 import graphql.schema.GraphQLInputType;

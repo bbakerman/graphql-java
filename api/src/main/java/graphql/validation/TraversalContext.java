@@ -2,7 +2,6 @@ package graphql.validation;
 
 
 import graphql.ShouldNotHappenException;
-import graphql.execution.TypeFromAST;
 import graphql.language.*;
 import graphql.schema.*;
 

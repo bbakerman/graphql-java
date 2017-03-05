@@ -1,7 +1,6 @@
 package graphql.validation.rules;
 
 
-import graphql.execution.TypeFromAST;
 import graphql.language.*;
 import graphql.schema.*;
 import graphql.validation.AbstractRule;
