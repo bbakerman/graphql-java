@@ -10,23 +10,34 @@ public class Assert {
         throw new AssertException(errorMessage);
     }
 
+    public static <T> T assertNotNull(T object) {
+        return assertNotNull(object, "Non Null Object Expected");
+    }
+
+    public static void assertState(boolean expression, String errorMessage) {
+        if (!expression) throw new AssertException(errorMessage);
+    }
+
     public static <T> Collection<T> assertNotEmpty(Collection<T> c, String errorMessage) {
         if (c == null || c.isEmpty()) throw new AssertException(errorMessage);
         return c;
     }
 
     private static final String invalidNameErrorMessage = "Name must be non-null, non-empty and match [_A-Za-z][_0-9A-Za-z]*";
+
     /**
      * Validates that the Lexical token name matches the current spec.
-     * currently non null, non empty, 
+     * currently non null, non empty,
+     *
      * @param name - the name to be validated.
-     * @return the name if valid, or AssertException if invalid. 
+     *
+     * @return the name if valid, or AssertException if invalid.
      */
-	public static String assertValidName(String name) {
-		if (name != null && !name.isEmpty() && name.matches("[_A-Za-z][_0-9A-Za-z]*")) {
-			return name;
-		}
-		throw new AssertException(invalidNameErrorMessage);
-	}
+    public static String assertValidName(String name) {
+        if (name != null && !name.isEmpty() && name.matches("[_A-Za-z][_0-9A-Za-z]*")) {
+            return name;
+        }
+        throw new AssertException(invalidNameErrorMessage);
+    }
 
 }
