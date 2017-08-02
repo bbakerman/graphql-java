@@ -157,12 +157,11 @@ public abstract class ExecutionStrategy {
                 new InstrumentationFieldParameters(executionContext, fieldDef, fieldTypeInfo(parameters, fieldDef))
         );
 
-        Object fetchedValue = fetchField(executionContext, parameters).join();
-
-        CompletableFuture<ExecutionResult> result = completeField(executionContext, parameters, fetchedValue);
+        CompletableFuture<ExecutionResult> result = fetchField(executionContext, parameters)
+                .thenCompose((fetchedValue) ->
+                        completeField(executionContext, parameters, fetchedValue));
 
         result.thenAccept(fieldCtx::onEnd);
-
         return result;
     }
 
