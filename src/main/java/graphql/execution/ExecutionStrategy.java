@@ -203,7 +203,7 @@ public abstract class ExecutionStrategy {
 
         InstrumentationFieldFetchParameters instrumentationFieldFetchParams = new InstrumentationFieldFetchParameters(executionContext, fieldDef, environment);
         InstrumentationContext<Object> fetchCtx = instrumentation.beginFieldFetch(instrumentationFieldFetchParams);
-        CompletableFuture<?> fetchedValue = null;
+        CompletableFuture<?> fetchedValue;
         try {
             DataFetcher dataFetcher = fieldDef.getDataFetcher();
             dataFetcher = instrumentation.instrumentDataFetcher(dataFetcher, instrumentationFieldFetchParams);
@@ -222,6 +222,7 @@ public abstract class ExecutionStrategy {
             });
         } catch (Exception e) {
             handleFetchingException(executionContext, parameters, field, fieldDef, argumentValues, environment, fetchCtx, e);
+            fetchedValue = CompletableFuture.completedFuture(null);
         }
         return fetchedValue;
     }
