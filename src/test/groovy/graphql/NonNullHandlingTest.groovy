@@ -1,7 +1,7 @@
 package graphql
 
+import graphql.execution.AsyncExecutionStrategy
 import graphql.execution.ExecutorServiceExecutionStrategy
-import graphql.execution.SimpleExecutionStrategy
 import graphql.schema.GraphQLOutputType
 import graphql.schema.GraphQLSchema
 import spock.lang.Specification
@@ -85,7 +85,7 @@ class NonNullHandlingTest extends Specification {
 
         strategyName | executionStrategy
         'executor'   | new ExecutorServiceExecutionStrategy(commonPool())
-        'simple'     | new SimpleExecutionStrategy()
+        'simple'     | new AsyncExecutionStrategy()
     }
 
     @Unroll
@@ -140,7 +140,7 @@ class NonNullHandlingTest extends Specification {
 
         strategyName | executionStrategy
         'executor'   | new ExecutorServiceExecutionStrategy(commonPool())
-        'simple'     | new SimpleExecutionStrategy()
+        'simple'     | new AsyncExecutionStrategy()
     }
 
     @Unroll
@@ -204,7 +204,7 @@ class NonNullHandlingTest extends Specification {
 
         strategyName | executionStrategy
         'executor'   | new ExecutorServiceExecutionStrategy(commonPool())
-        'simple'     | new SimpleExecutionStrategy()
+        'simple'     | new AsyncExecutionStrategy()
 
     }
 
@@ -269,7 +269,7 @@ class NonNullHandlingTest extends Specification {
 
         strategyName | executionStrategy
         'executor'   | new ExecutorServiceExecutionStrategy(commonPool())
-        'simple'     | new SimpleExecutionStrategy()
+        'simple'     | new AsyncExecutionStrategy()
 
     }
 

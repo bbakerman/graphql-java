@@ -48,7 +48,7 @@ public class ExecutorServiceExecutionStrategy extends ExecutionStrategy {
     @Override
     public CompletableFuture<ExecutionResult> execute(final ExecutionContext executionContext, final ExecutionStrategyParameters parameters) {
         if (executorService == null)
-            return new SimpleExecutionStrategy().execute(executionContext, parameters);
+            return new AsyncExecutionStrategy().execute(executionContext, parameters);
 
         Map<String, List<Field>> fields = parameters.fields();
         Map<String, Future<CompletableFuture<ExecutionResult>>> futures = new LinkedHashMap<>();

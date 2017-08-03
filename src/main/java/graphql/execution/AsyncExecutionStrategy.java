@@ -14,12 +14,12 @@ import java.util.concurrent.CompletionException;
 /**
  * The standard graphql execution strategy that runs fields in serial order
  */
-public class SimpleExecutionStrategy extends ExecutionStrategy {
+public class AsyncExecutionStrategy extends ExecutionStrategy {
 
     /**
      * The standard graphql execution strategy that runs fields in serial order
      */
-    public SimpleExecutionStrategy() {
+    public AsyncExecutionStrategy() {
         super(new SimpleDataFetcherExceptionHandler());
     }
 
@@ -28,7 +28,7 @@ public class SimpleExecutionStrategy extends ExecutionStrategy {
      *
      * @param exceptionHandler the exception handler to use
      */
-    public SimpleExecutionStrategy(DataFetcherExceptionHandler exceptionHandler) {
+    public AsyncExecutionStrategy(DataFetcherExceptionHandler exceptionHandler) {
         super(exceptionHandler);
     }
 
