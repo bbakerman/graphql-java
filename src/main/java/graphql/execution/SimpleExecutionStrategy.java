@@ -4,12 +4,12 @@ import graphql.ExecutionResult;
 import graphql.ExecutionResultImpl;
 import graphql.language.Field;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import java.util.concurrent.CompletionException;
 
 /**
  * The standard graphql execution strategy that runs fields in serial order
@@ -34,25 +34,54 @@ public class SimpleExecutionStrategy extends ExecutionStrategy {
 
     @Override
     public CompletableFuture<ExecutionResult> execute(ExecutionContext executionContext, ExecutionStrategyParameters parameters) throws NonNullableFieldWasNullException {
+
         Map<String, List<Field>> fields = parameters.fields();
-        Map<String, Object> results = new LinkedHashMap<>();
-        for (String fieldName : fields.keySet()) {
+        List<String> fieldNames = new ArrayList<>(fields.keySet());
+        List<CompletableFuture<ExecutionResult>> futures = new ArrayList<>();
+        for (String fieldName : fieldNames) {
             List<Field> currentField = fields.get(fieldName);
 
             ExecutionPath fieldPath = parameters.path().segment(fieldName);
             ExecutionStrategyParameters newParameters = parameters
                     .transform(builder -> builder.field(currentField).path(fieldPath));
 
-            try {
-                ExecutionResult resolvedResult = resolveField(executionContext, newParameters).join();
+            CompletableFuture<ExecutionResult> future = resolveField(executionContext, newParameters);
+            futures.add(future);
 
-                results.put(fieldName, resolvedResult != null ? resolvedResult.getData() : null);
-            } catch (NonNullableFieldWasNullException e) {
-                assertNonNullFieldPrecondition(e);
-                results = null;
-                break;
-            }
         }
-        return completedFuture(new ExecutionResultImpl(results, executionContext.getErrors()));
+
+        CompletableFuture<ExecutionResult> result = new CompletableFuture<>();
+        Map<String, Object> resolvedValuesByField = new LinkedHashMap<>();
+
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
+                .whenComplete((notUsed1, notUsed2) -> {
+                    int ix = 0;
+                    for (CompletableFuture<ExecutionResult> future : futures) {
+
+                        if (future.isCompletedExceptionally()) {
+                            future.whenComplete((Null, e) -> {
+
+                                if (e instanceof CompletionException && e.getCause() instanceof NonNullableFieldWasNullException) {
+                                    NonNullableFieldWasNullException nonNullableException = (NonNullableFieldWasNullException) e.getCause();
+                                    ExecutionTypeInfo typeInfo = nonNullableException.getTypeInfo();
+                                    if (typeInfo.hasParentType() && typeInfo.getParentTypeInfo().isNonNullType()) {
+                                        result.completeExceptionally(new NonNullableFieldWasNullException(nonNullableException));
+                                    } else {
+                                        result.complete(new ExecutionResultImpl(null, executionContext.getErrors()));
+                                    }
+                                } else {
+                                    result.completeExceptionally(e);
+                                }
+                            });
+                            return;
+                        }
+                        String fieldName = fieldNames.get(ix++);
+                        ExecutionResult resolvedResult = future.join();
+                        resolvedValuesByField.put(fieldName, resolvedResult != null ? resolvedResult.getData() : null);
+                    }
+                    result.complete(new ExecutionResultImpl(resolvedValuesByField, executionContext.getErrors()));
+                });
+
+        return result;
     }
 }

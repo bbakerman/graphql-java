@@ -218,7 +218,13 @@ public abstract class ExecutionStrategy {
             fetchedValue.exceptionally((e) -> {
                 // TODO: make sure this is tested
                 handleFetchingException(executionContext, parameters, field, fieldDef, argumentValues, environment, fetchCtx, e);
-                throw new RuntimeException(e);
+                if (e instanceof RuntimeException) {
+                    throw (RuntimeException) e;
+                } else if (e instanceof Error) {
+                    throw (Error) e;
+                } else {
+                    throw new RuntimeException(e);
+                }
             });
         } catch (Exception e) {
             handleFetchingException(executionContext, parameters, field, fieldDef, argumentValues, environment, fetchCtx, e);
