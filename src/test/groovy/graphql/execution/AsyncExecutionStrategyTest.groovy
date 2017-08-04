@@ -1,5 +1,6 @@
 package graphql.execution
 
+import graphql.ErrorType
 import graphql.execution.instrumentation.NoOpInstrumentation
 import graphql.language.Field
 import graphql.parser.Parser
@@ -115,6 +116,46 @@ class AsyncExecutionStrategyTest extends Specification {
         Thread.sleep(200)
         result.isDone()
         result.get().data == ['hello': 'world', 'hello2': 'world2']
+
+    }
+
+    def "exception while fetching data"() {
+        GraphQLSchema schema = schema(
+                { env -> CompletableFuture.completedFuture("world") },
+                { env ->
+                    throw new NullPointerException()
+                }
+        )
+        String query = "{hello, hello2}"
+        def document = new Parser().parseDocument(query)
+
+        def typeInfo = ExecutionTypeInfo.newTypeInfo()
+                .type(schema.getQueryType())
+                .build()
+
+        ExecutionContext executionContext = new ExecutionContextBuilder()
+                .graphQLSchema(schema)
+                .executionId(ExecutionId.generate())
+                .document(document)
+                .valuesResolver(new ValuesResolver())
+                .instrumentation(NoOpInstrumentation.INSTANCE)
+                .build()
+        ExecutionStrategyParameters executionStrategyParameters = ExecutionStrategyParameters
+                .newParameters()
+                .typeInfo(typeInfo)
+                .fields(['hello': [new Field('hello')], 'hello2': [new Field('hello2')]])
+                .build()
+
+        AsyncExecutionStrategy asyncExecutionStrategy = new AsyncExecutionStrategy()
+        when:
+        def result = asyncExecutionStrategy.execute(executionContext, executionStrategyParameters)
+
+
+        then:
+        result.isDone()
+        result.get().data == ['hello': 'world', 'hello2': null]
+        result.get().getErrors().size() == 1
+        result.get().getErrors().get(0).errorType == ErrorType.DataFetchingException
 
     }
 }
