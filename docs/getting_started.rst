@@ -44,7 +44,7 @@ Hello World
 
 This is the famous "hello world" in ``graphql-java``:
 
-.. literalinclude:: ../src/test/java/HelloWorld.java
+.. literalinclude:: ../src/test/groovy/example/HelloWorld.java
     :language: java
 
 

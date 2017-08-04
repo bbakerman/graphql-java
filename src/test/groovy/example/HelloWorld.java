@@ -1,3 +1,5 @@
+package example;
+
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import graphql.schema.GraphQLSchema;
