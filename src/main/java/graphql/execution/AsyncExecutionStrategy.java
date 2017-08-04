@@ -13,19 +13,19 @@ import java.util.concurrent.CompletionException;
 import java.util.function.BiConsumer;
 
 /**
- * The standard graphql execution strategy that runs fields in serial order
+ * The standard graphql execution strategy that runs fields asynchronously
  */
 public class AsyncExecutionStrategy extends ExecutionStrategy {
 
     /**
-     * The standard graphql execution strategy that runs fields in serial order
+     * The standard graphql execution strategy that runs fields asynchronously
      */
     public AsyncExecutionStrategy() {
         super(new SimpleDataFetcherExceptionHandler());
     }
 
     /**
-     * Creates a simple execution handler that uses the provided exception handler
+     * Creates a execution strategy that uses the provided exception handler
      *
      * @param exceptionHandler the exception handler to use
      */
@@ -68,9 +68,7 @@ public class AsyncExecutionStrategy extends ExecutionStrategy {
             for (CompletableFuture<ExecutionResult> future : futures) {
 
                 if (future.isCompletedExceptionally()) {
-                    future.whenComplete((Null, e) -> {
-                        handleException(executionContext, result, e);
-                    });
+                    future.whenComplete((Null, e) -> handleException(executionContext, result, e));
                     return;
                 }
                 String fieldName = fieldNames.get(ix++);
@@ -83,11 +81,8 @@ public class AsyncExecutionStrategy extends ExecutionStrategy {
 
     private void handleException(ExecutionContext executionContext, CompletableFuture<ExecutionResult> result, Throwable e) {
         if (e instanceof CompletionException && e.getCause() instanceof NonNullableFieldWasNullException) {
-            NonNullableFieldWasNullException nonNullableException = (NonNullableFieldWasNullException) e.getCause();
-            ExecutionTypeInfo typeInfo = nonNullableException.getTypeInfo();
-            if (typeInfo.hasParentType() && typeInfo.getParentTypeInfo().isNonNullType()) {
-                result.completeExceptionally(new NonNullableFieldWasNullException(nonNullableException));
-            } else {
+            assertNonNullFieldPrecondition((NonNullableFieldWasNullException) e.getCause(), result);
+            if (!result.isDone()) {
                 result.complete(new ExecutionResultImpl(null, executionContext.getErrors()));
             }
         } else {

@@ -565,6 +565,13 @@ public abstract class ExecutionStrategy {
         }
     }
 
+    protected void assertNonNullFieldPrecondition(NonNullableFieldWasNullException e, CompletableFuture<?> completableFuture) throws NonNullableFieldWasNullException {
+        ExecutionTypeInfo typeInfo = e.getTypeInfo();
+        if (typeInfo.hasParentType() && typeInfo.getParentTypeInfo().isNonNullType()) {
+            completableFuture.completeExceptionally(new NonNullableFieldWasNullException(e));
+        }
+    }
+
     /**
      * This will join all of the promises of a result as one and return a execution result that
      * is a list of all the promised values
