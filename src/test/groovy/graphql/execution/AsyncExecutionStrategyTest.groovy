@@ -3,6 +3,7 @@ package graphql.execution
 import graphql.execution.instrumentation.NoOpInstrumentation
 import graphql.language.Field
 import graphql.parser.Parser
+import graphql.schema.DataFetcher
 import graphql.schema.GraphQLFieldDefinition
 import graphql.schema.GraphQLSchema
 import spock.lang.Specification
@@ -16,15 +17,15 @@ import static graphql.schema.GraphQLSchema.newSchema
 
 class AsyncExecutionStrategyTest extends Specification {
 
-    GraphQLSchema simpleSchema() {
+    GraphQLSchema schema(DataFetcher dataFetcher1, DataFetcher dataFetcher2) {
         GraphQLFieldDefinition.Builder fieldDefinition = newFieldDefinition()
                 .name("hello")
                 .type(GraphQLString)
-                .dataFetcher({ env -> CompletableFuture.completedFuture("world") })
+                .dataFetcher(dataFetcher1)
         GraphQLFieldDefinition.Builder fieldDefinition2 = newFieldDefinition()
                 .name("hello2")
                 .type(GraphQLString)
-                .dataFetcher({ env -> CompletableFuture.completedFuture("world2") })
+                .dataFetcher(dataFetcher2)
 
         GraphQLSchema schema = newSchema().query(
                 newObject()
@@ -37,10 +38,13 @@ class AsyncExecutionStrategyTest extends Specification {
     }
 
 
-    def "normal execution"() {
+    def "execution with already completed futures"() {
         given:
 
-        GraphQLSchema schema = simpleSchema()
+        GraphQLSchema schema = schema(
+                { env -> CompletableFuture.completedFuture("world") },
+                { env -> CompletableFuture.completedFuture("world2") }
+        )
         String query = "{hello, hello2}"
         def document = new Parser().parseDocument(query)
 
@@ -69,5 +73,48 @@ class AsyncExecutionStrategyTest extends Specification {
         then:
         result.isDone()
         result.get().data == ['hello': 'world', 'hello2': 'world2']
+    }
+
+    def "async execution"() {
+        GraphQLSchema schema = schema(
+                { env -> CompletableFuture.completedFuture("world") },
+                { env ->
+                    CompletableFuture.supplyAsync({ ->
+                        Thread.sleep(100)
+                        "world2"
+                    })
+                }
+        )
+        String query = "{hello, hello2}"
+        def document = new Parser().parseDocument(query)
+
+        def typeInfo = ExecutionTypeInfo.newTypeInfo()
+                .type(schema.getQueryType())
+                .build()
+
+        ExecutionContext executionContext = new ExecutionContextBuilder()
+                .graphQLSchema(schema)
+                .executionId(ExecutionId.generate())
+                .document(document)
+                .valuesResolver(new ValuesResolver())
+                .instrumentation(NoOpInstrumentation.INSTANCE)
+                .build()
+        ExecutionStrategyParameters executionStrategyParameters = ExecutionStrategyParameters
+                .newParameters()
+                .typeInfo(typeInfo)
+                .fields(['hello': [new Field('hello')], 'hello2': [new Field('hello2')]])
+                .build()
+
+        AsyncExecutionStrategy asyncExecutionStrategy = new AsyncExecutionStrategy()
+        when:
+        def result = asyncExecutionStrategy.execute(executionContext, executionStrategyParameters)
+
+
+        then:
+        !result.isDone()
+        Thread.sleep(200)
+        result.isDone()
+        result.get().data == ['hello': 'world', 'hello2': 'world2']
+
     }
 }
