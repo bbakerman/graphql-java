@@ -177,7 +177,7 @@ public abstract class ExecutionStrategy {
      * @return a fetched object
      * @throws NonNullableFieldWasNullException if a non null field resolves to a null value
      */
-    protected CompletableFuture<?> fetchField(ExecutionContext executionContext, ExecutionStrategyParameters parameters) {
+    protected CompletableFuture<Object> fetchField(ExecutionContext executionContext, ExecutionStrategyParameters parameters) {
         Field field = parameters.field().get(0);
         GraphQLObjectType parentType = parameters.typeInfo().castType(GraphQLObjectType.class);
         GraphQLFieldDefinition fieldDef = getFieldDef(executionContext.getGraphQLSchema(), parentType, field);
@@ -204,33 +204,28 @@ public abstract class ExecutionStrategy {
         InstrumentationFieldFetchParameters instrumentationFieldFetchParams = new InstrumentationFieldFetchParameters(executionContext, fieldDef, environment);
         InstrumentationContext<Object> fetchCtx = instrumentation.beginFieldFetch(instrumentationFieldFetchParams);
         CompletableFuture<?> fetchedValue;
+        DataFetcher dataFetcher = fieldDef.getDataFetcher();
+        dataFetcher = instrumentation.instrumentDataFetcher(dataFetcher, instrumentationFieldFetchParams);
         try {
-            DataFetcher dataFetcher = fieldDef.getDataFetcher();
-            dataFetcher = instrumentation.instrumentDataFetcher(dataFetcher, instrumentationFieldFetchParams);
             Object fetchedValueRaw = dataFetcher.get(environment);
             if (fetchedValueRaw instanceof CompletableFuture) {
                 fetchedValue = (CompletableFuture<?>) fetchedValueRaw;
             } else {
                 fetchedValue = CompletableFuture.completedFuture(fetchedValueRaw);
             }
-            fetchedValue.thenAccept(fetchCtx::onEnd);
-
-            fetchedValue.exceptionally((e) -> {
-                // TODO: make sure this is tested
-                handleFetchingException(executionContext, parameters, field, fieldDef, argumentValues, environment, fetchCtx, e);
-                if (e instanceof RuntimeException) {
-                    throw (RuntimeException) e;
-                } else if (e instanceof Error) {
-                    throw (Error) e;
-                } else {
-                    throw new RuntimeException(e);
-                }
-            });
         } catch (Exception e) {
-            handleFetchingException(executionContext, parameters, field, fieldDef, argumentValues, environment, fetchCtx, e);
-            fetchedValue = CompletableFuture.completedFuture(null);
+            fetchedValue = new CompletableFuture<>();
+            fetchedValue.completeExceptionally(e);
         }
-        return fetchedValue;
+        fetchedValue.thenAccept(fetchCtx::onEnd);
+        return fetchedValue.handle((result, exception) -> {
+            if (exception != null) {
+                handleFetchingException(executionContext, parameters, field, fieldDef, argumentValues, environment, fetchCtx, exception);
+                return null;
+            } else {
+                return result;
+            }
+        });
     }
 
     private void handleFetchingException(ExecutionContext executionContext,
