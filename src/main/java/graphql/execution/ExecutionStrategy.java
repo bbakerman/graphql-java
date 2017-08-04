@@ -311,7 +311,7 @@ public abstract class ExecutionStrategy {
         GraphQLType fieldType = typeInfo.getType();
 
         if (result == null) {
-            return completedFuture(parameters.nonNullFieldValidator().validate(parameters.path(), null));
+            return completedFuture(new ExecutionResultImpl(parameters.nonNullFieldValidator().validate(parameters.path(), null), null));
         } else if (fieldType instanceof GraphQLList) {
             return completeValueForList(executionContext, parameters, toIterable(result));
         } else if (fieldType instanceof GraphQLScalarType) {
@@ -584,7 +584,7 @@ public abstract class ExecutionStrategy {
         List<Object> completedResults = new ArrayList<>();
         completableFutures.forEach(future -> {
             ExecutionResult completedValue = future.getNow(null);
-            completedResults.add(completedValue != null ? completedValue.getData() : null);
+            completedResults.add(completedValue.getData());
         });
         return new ExecutionResultImpl(completedResults, null);
     }

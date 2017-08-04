@@ -35,7 +35,7 @@ public class SerialExecutionStrategy extends ExecutionStrategy {
 
             try {
                 ExecutionResult resolvedResult = resolveField(executionContext, newParameters).join();
-                results.put(fieldName, resolvedResult != null ? resolvedResult.getData() : null);
+                results.put(fieldName, resolvedResult.getData());
             } catch (CompletionException e) {
                 if (e.getCause() instanceof NonNullableFieldWasNullException) {
                     assertNonNullFieldPrecondition((NonNullableFieldWasNullException) e.getCause());

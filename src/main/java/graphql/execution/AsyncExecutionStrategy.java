@@ -73,7 +73,7 @@ public class AsyncExecutionStrategy extends ExecutionStrategy {
                 }
                 String fieldName = fieldNames.get(ix++);
                 ExecutionResult resolvedResult = future.join();
-                resolvedValuesByField.put(fieldName, resolvedResult != null ? resolvedResult.getData() : null);
+                resolvedValuesByField.put(fieldName, resolvedResult.getData());
             }
             result.complete(new ExecutionResultImpl(resolvedValuesByField, executionContext.getErrors()));
         };
