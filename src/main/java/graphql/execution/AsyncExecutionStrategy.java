@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.function.BiConsumer;
 
 /**
  * The standard graphql execution strategy that runs fields in serial order
@@ -47,41 +48,50 @@ public class AsyncExecutionStrategy extends ExecutionStrategy {
 
             CompletableFuture<ExecutionResult> future = resolveField(executionContext, newParameters);
             futures.add(future);
-
         }
 
         CompletableFuture<ExecutionResult> result = new CompletableFuture<>();
-        Map<String, Object> resolvedValuesByField = new LinkedHashMap<>();
-
-        CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]))
-                .whenComplete((notUsed1, notUsed2) -> {
-                    int ix = 0;
-                    for (CompletableFuture<ExecutionResult> future : futures) {
-
-                        if (future.isCompletedExceptionally()) {
-                            future.whenComplete((Null, e) -> {
-
-                                if (e instanceof CompletionException && e.getCause() instanceof NonNullableFieldWasNullException) {
-                                    NonNullableFieldWasNullException nonNullableException = (NonNullableFieldWasNullException) e.getCause();
-                                    ExecutionTypeInfo typeInfo = nonNullableException.getTypeInfo();
-                                    if (typeInfo.hasParentType() && typeInfo.getParentTypeInfo().isNonNullType()) {
-                                        result.completeExceptionally(new NonNullableFieldWasNullException(nonNullableException));
-                                    } else {
-                                        result.complete(new ExecutionResultImpl(null, executionContext.getErrors()));
-                                    }
-                                } else {
-                                    result.completeExceptionally(e);
-                                }
-                            });
-                            return;
-                        }
-                        String fieldName = fieldNames.get(ix++);
-                        ExecutionResult resolvedResult = future.join();
-                        resolvedValuesByField.put(fieldName, resolvedResult != null ? resolvedResult.getData() : null);
-                    }
-                    result.complete(new ExecutionResultImpl(resolvedValuesByField, executionContext.getErrors()));
-                });
+        CompletableFuture
+                .allOf(futures.toArray(new CompletableFuture[futures.size()]))
+                .whenComplete(futuresCompleted(executionContext, fieldNames, futures, result));
 
         return result;
+    }
+
+    private BiConsumer<Void, Throwable> futuresCompleted(ExecutionContext executionContext,
+                                                         List<String> fieldNames,
+                                                         List<CompletableFuture<ExecutionResult>> futures,
+                                                         CompletableFuture<ExecutionResult> result) {
+        return (notUsed1, notUsed2) -> {
+            Map<String, Object> resolvedValuesByField = new LinkedHashMap<>();
+            int ix = 0;
+            for (CompletableFuture<ExecutionResult> future : futures) {
+
+                if (future.isCompletedExceptionally()) {
+                    future.whenComplete((Null, e) -> {
+                        handleException(executionContext, result, e);
+                    });
+                    return;
+                }
+                String fieldName = fieldNames.get(ix++);
+                ExecutionResult resolvedResult = future.join();
+                resolvedValuesByField.put(fieldName, resolvedResult != null ? resolvedResult.getData() : null);
+            }
+            result.complete(new ExecutionResultImpl(resolvedValuesByField, executionContext.getErrors()));
+        };
+    }
+
+    private void handleException(ExecutionContext executionContext, CompletableFuture<ExecutionResult> result, Throwable e) {
+        if (e instanceof CompletionException && e.getCause() instanceof NonNullableFieldWasNullException) {
+            NonNullableFieldWasNullException nonNullableException = (NonNullableFieldWasNullException) e.getCause();
+            ExecutionTypeInfo typeInfo = nonNullableException.getTypeInfo();
+            if (typeInfo.hasParentType() && typeInfo.getParentTypeInfo().isNonNullType()) {
+                result.completeExceptionally(new NonNullableFieldWasNullException(nonNullableException));
+            } else {
+                result.complete(new ExecutionResultImpl(null, executionContext.getErrors()));
+            }
+        } else {
+            result.completeExceptionally(e);
+        }
     }
 }
