@@ -14,8 +14,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 
-import static java.util.concurrent.CompletableFuture.supplyAsync;
-
 /**
  * To prove we can write other execution strategies this one does a breath first asynch approach
  * running all fields asynch first, waiting for the results
@@ -46,10 +44,9 @@ public class AsyncFetchThenCompleteExecutionTestStrategy extends ExecutionStrate
 
         // first fetch every value
         for (String fieldName : fields.keySet()) {
-            ExecutionStrategyParameters newParameters = newParameters(parameters, fields,fieldName);
+            ExecutionStrategyParameters newParameters = newParameters(parameters, fields, fieldName);
 
-            CompletableFuture<Object> fetchFuture = supplyAsync(() ->
-                    fetchField(executionContext, newParameters), executor);
+            CompletableFuture<Object> fetchFuture = fetchField(executionContext, newParameters);
             fetchFutures.put(fieldName, fetchFuture);
         }
 
