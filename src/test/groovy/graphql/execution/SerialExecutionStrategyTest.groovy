@@ -9,7 +9,6 @@ import graphql.schema.GraphQLSchema
 import spock.lang.Specification
 
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 
@@ -48,23 +47,23 @@ class SerialExecutionStrategyTest extends Specification {
 
     def "serial execution"() {
         given:
-        AtomicInteger atomicInteger = new AtomicInteger()
-        ReentrantLock reentrantLock = new ReentrantLock()
+        def atomicInteger = new AtomicInteger()
+        def reentrantLock = new ReentrantLock()
         GraphQLSchema schema = schema(
                 { env ->
-                    reentrantLock.tryLock(0, TimeUnit.SECONDS)
+                    assert reentrantLock.tryLock()
                     def result = CompletableFuture.completedFuture("world" + (atomicInteger.incrementAndGet()))
                     reentrantLock.unlock()
                     result
                 },
                 { env ->
-                    reentrantLock.tryLock(0, TimeUnit.SECONDS)
+                    assert reentrantLock.tryLock()
                     def result = CompletableFuture.completedFuture("world" + (atomicInteger.incrementAndGet()))
                     reentrantLock.unlock()
                     result
                 },
                 { env ->
-                    reentrantLock.tryLock(0, TimeUnit.SECONDS)
+                    assert reentrantLock.tryLock()
                     def result = CompletableFuture.completedFuture("world" + (atomicInteger.incrementAndGet()))
                     reentrantLock.unlock()
                     result

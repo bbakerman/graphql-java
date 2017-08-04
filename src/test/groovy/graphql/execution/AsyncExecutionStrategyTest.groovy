@@ -10,6 +10,8 @@ import graphql.schema.GraphQLSchema
 import spock.lang.Specification
 
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.ReentrantLock
 
 import static graphql.Scalars.GraphQLString
 import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition
@@ -38,6 +40,56 @@ class AsyncExecutionStrategyTest extends Specification {
         schema
     }
 
+
+    def "execution is serial if the dataFetchers are blocking"() {
+        given:
+        def lock = new ReentrantLock()
+        def counter = new AtomicInteger()
+        GraphQLSchema schema = schema(
+                { env ->
+                    assert lock.tryLock()
+                    Thread.sleep(100)
+                    def result = "world" + (counter.incrementAndGet())
+                    lock.unlock()
+                    result
+                },
+                { env ->
+                    assert lock.tryLock()
+                    def result = "world" + (counter.incrementAndGet())
+                    lock.unlock()
+                    result
+                }
+        )
+        String query = "{hello, hello2}"
+        def document = new Parser().parseDocument(query)
+
+        def typeInfo = ExecutionTypeInfo.newTypeInfo()
+                .type(schema.getQueryType())
+                .build()
+
+        ExecutionContext executionContext = new ExecutionContextBuilder()
+                .graphQLSchema(schema)
+                .executionId(ExecutionId.generate())
+                .document(document)
+                .valuesResolver(new ValuesResolver())
+                .instrumentation(NoOpInstrumentation.INSTANCE)
+                .build()
+        ExecutionStrategyParameters executionStrategyParameters = ExecutionStrategyParameters
+                .newParameters()
+                .typeInfo(typeInfo)
+                .fields(['hello': [new Field('hello')], 'hello2': [new Field('hello2')]])
+                .build()
+
+        AsyncExecutionStrategy asyncExecutionStrategy = new AsyncExecutionStrategy()
+        when:
+        def result = asyncExecutionStrategy.execute(executionContext, executionStrategyParameters)
+
+
+        then:
+        result.isDone()
+        result.get().data == ['hello': 'world1', 'hello2': 'world2']
+
+    }
 
     def "execution with already completed futures"() {
         given:
