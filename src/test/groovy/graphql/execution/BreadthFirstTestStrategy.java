@@ -10,23 +10,19 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 
 /**
- * To prove we can write other execution strategies this one does a breath first asynch approach
- * running all fields asynch first, waiting for the results
+ * To prove we can write other execution strategies this one does a breadth first async approach
+ * running all fields async first, waiting for the results
  */
 @SuppressWarnings("Duplicates")
 @Internal
-public class AsyncFetchThenCompleteExecutionTestStrategy extends ExecutionStrategy {
+public class BreadthFirstTestStrategy extends ExecutionStrategy {
 
-    private final ExecutorService executor;
 
-    public AsyncFetchThenCompleteExecutionTestStrategy() {
+    public BreadthFirstTestStrategy() {
         super(new SimpleDataFetcherExceptionHandler());
-        this.executor = ForkJoinPool.commonPool();
     }
 
     @Override
