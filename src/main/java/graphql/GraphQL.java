@@ -131,7 +131,7 @@ public class GraphQL {
     public static class Builder {
         private GraphQLSchema graphQLSchema;
         private ExecutionStrategy queryExecutionStrategy = new AsyncExecutionStrategy();
-        private ExecutionStrategy mutationExecutionStrategy = new AsyncExecutionStrategy();
+        private ExecutionStrategy mutationExecutionStrategy = new AsyncSerialExecutionStrategy();
         private ExecutionStrategy subscriptionExecutionStrategy = new AsyncExecutionStrategy();
         private ExecutionIdProvider idProvider = DEFAULT_EXECUTION_ID_PROVIDER;
         private Instrumentation instrumentation = NoOpInstrumentation.INSTANCE;
