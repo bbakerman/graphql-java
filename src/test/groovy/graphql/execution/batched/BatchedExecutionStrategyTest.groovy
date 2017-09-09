@@ -379,4 +379,43 @@ class BatchedExecutionStrategyTest extends Specification {
         runTestBatching(query, expected)
         runTestBatchingExpectErrors(query, new BatchAssertionFailed(), false)
     }
+
+    def "#673 optional support"() {
+        given:
+        String query = "{ string(value: \"673-optional-support\"){emptyOptional, optional} }"
+
+        def expected = [string: [emptyOptional: null, optional: "673-optional-support"]]
+        println expected
+
+        expect:
+        runTest(query, expected)
+    }
+
+
+    def "Any Iterable is accepted as GraphQL list value"() {
+        given:
+        String query = "{ string(value: \"test\"){ anyIterable } }"
+        Map<String, Object> expected = ["string": ["anyIterable": ["test", "end"]]]
+        expect:
+        runTest(query, expected)
+    }
+
+    def "#672-683 handles completable futures ok"() {
+
+        given:
+        String query = "{ string(value: \"test\"){ completableFuture } }"
+        Map<String, Object> expected = ["string": ["completableFuture": "completableFuture"]]
+        expect:
+        runTest(query, expected)
+    }
+
+    def "#672-683 handles completable futures ok in interfaces"() {
+
+        given:
+        String query = "{ interface { value } }"
+        Map<String, Object> expected = ["interface": ["value": "interfacesHandled"]]
+        expect:
+        runTest(query, expected)
+    }
+
 }

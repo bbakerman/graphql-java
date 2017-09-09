@@ -29,14 +29,14 @@ import graphql.schema.GraphQLUnionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
+import java.util.stream.IntStream;
 
 import static graphql.execution.ExecutionTypeInfo.newTypeInfo;
 import static graphql.execution.FieldCollectorParameters.newParameters;
@@ -45,6 +45,7 @@ import static graphql.introspection.Introspection.TypeMetaFieldDef;
 import static graphql.introspection.Introspection.TypeNameMetaFieldDef;
 import static graphql.schema.DataFetchingEnvironmentBuilder.newDataFetchingEnvironment;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.stream.Collectors.toList;
 
 /**
  * An execution strategy is give a list of fields from the graphql query to execute and find values for using a recursive strategy.
@@ -216,11 +217,7 @@ public abstract class ExecutionStrategy {
         dataFetcher = instrumentation.instrumentDataFetcher(dataFetcher, instrumentationFieldFetchParams);
         try {
             Object fetchedValueRaw = dataFetcher.get(environment);
-            if (fetchedValueRaw instanceof CompletionStage) {
-                fetchedValue = ((CompletionStage) fetchedValueRaw).toCompletableFuture();
-            } else {
-                fetchedValue = CompletableFuture.completedFuture(fetchedValueRaw);
-            }
+            fetchedValue = Async.toCompletableFuture(fetchedValueRaw);
         } catch (Exception e) {
             fetchedValue = new CompletableFuture<>();
             fetchedValue.completeExceptionally(e);
@@ -387,7 +384,7 @@ public abstract class ExecutionStrategy {
      *
      * @return an un-boxed result
      */
-    private Object unboxPossibleOptional(Object result) {
+    protected Object unboxPossibleOptional(Object result) {
         if (result instanceof Optional) {
             Optional optional = (Optional) result;
             if (optional.isPresent()) {
@@ -399,9 +396,20 @@ public abstract class ExecutionStrategy {
         return result;
     }
 
-    private Iterable<Object> toIterable(Object result) {
+    /**
+     * Converts an object that is known to should be an Iterable into one
+     *
+     * @param result the result object
+     *
+     * @return an Iterable from that object
+     *
+     * @throws java.lang.ClassCastException if its not an Iterable
+     */
+    protected Iterable<Object> toIterable(Object result) {
         if (result.getClass().isArray()) {
-            result = Arrays.asList((Object[]) result);
+            return IntStream.range(0, Array.getLength(result))
+                    .mapToObj(i -> Array.get(result, i))
+                    .collect(toList());
         }
         //noinspection unchecked
         return (Iterable<Object>) result;
