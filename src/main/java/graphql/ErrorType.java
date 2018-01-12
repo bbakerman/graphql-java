@@ -9,6 +9,7 @@ public enum ErrorType {
     InvalidSyntax,
     ValidationError,
     DataFetchingException,
+    DataError,
     OperationNotSupported,
     ExecutionAborted
 }

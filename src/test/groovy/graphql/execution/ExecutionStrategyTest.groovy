@@ -1,7 +1,9 @@
 package graphql.execution
 
 import graphql.Assert
+import graphql.DataError
 import graphql.DataFetchingErrorGraphQLError
+import graphql.ErrorType
 import graphql.ExceptionWhileDataFetching
 import graphql.ExecutionResult
 import graphql.Scalars
@@ -537,11 +539,11 @@ class ExecutionStrategyTest extends Specification {
         def field = new Field("parent")
         field.setSourceLocation(new SourceLocation(5, 10))
         def parameters = newParameters()
-            .path(ExecutionPath.fromList(["parent"]))
-            .field([field])
-            .fields(["parent":[field]])
-            .typeInfo(typeInfo)
-            .build()
+                .path(ExecutionPath.fromList(["parent"]))
+                .field([field])
+                .fields(["parent": [field]])
+                .typeInfo(typeInfo)
+                .build()
 
         def executionData = ["child": [:]]
         when:
@@ -567,7 +569,7 @@ class ExecutionStrategyTest extends Specification {
         def parameters = newParameters()
                 .path(ExecutionPath.fromList(["parent"]))
                 .field([field])
-                .fields(["parent":[field]])
+                .fields(["parent": [field]])
                 .typeInfo(typeInfo)
                 .build()
 
@@ -631,5 +633,50 @@ class ExecutionStrategyTest extends Specification {
         executionResult.data == null
         executionContext.errors.size() == 1
         executionContext.errors[0] instanceof TypeMismatchError
+    }
+
+    def "when fetchValue returns a GraphqlError it is captured as an error"() {
+        given:
+
+        def dataFetcher = new DataFetcher() {
+            @Override
+            Object get(DataFetchingEnvironment environment) {
+                return new DataError("somedataerror")
+            }
+        }
+        def objectType = newObject()
+                .name("Test")
+                .field(
+                newFieldDefinition()
+                        .name("someField")
+                        .type(GraphQLString)
+                        .dataFetcher(dataFetcher)
+                        .build())
+                .build()
+
+        GraphQLSchema schema = GraphQLSchema.newSchema().query(objectType).build()
+        ExecutionContext executionContext = buildContext(schema)
+
+        def typeInfo = ExecutionTypeInfo.newTypeInfo().type(objectType).build()
+        NonNullableFieldValidator nullableFieldValidator = new NonNullableFieldValidator(executionContext, typeInfo)
+        Field field = new Field("someField")
+
+        def parameters = newParameters()
+                .typeInfo(typeInfo)
+                .source(null)
+                .nonNullFieldValidator(nullableFieldValidator)
+                .field([field])
+                .fields(["someField": [field]])
+                .path(ExecutionPath.rootPath().segment("abc"))
+                .build()
+
+        when:
+        def returnedValue = executionStrategy.fetchField(executionContext, parameters).join()
+
+        then:
+        returnedValue == null
+        executionContext.errors.size() == 1 // only 1 error
+        executionContext.errors[0].message == "somedataerror"
+        executionContext.errors[0].errorType == ErrorType.DataError
     }
 }

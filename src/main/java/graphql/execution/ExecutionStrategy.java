@@ -1,18 +1,8 @@
 package graphql.execution;
 
-import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.stream.IntStream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import graphql.ExecutionResult;
 import graphql.ExecutionResultImpl;
+import graphql.GraphQLError;
 import graphql.PublicSpi;
 import graphql.SerializationError;
 import graphql.TypeMismatchError;
@@ -40,6 +30,17 @@ import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLUnionType;
 import graphql.schema.visibility.GraphqlFieldVisibility;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.stream.IntStream;
 
 import static graphql.execution.ExecutionTypeInfo.newTypeInfo;
 import static graphql.execution.FieldCollectorParameters.newParameters;
@@ -236,6 +237,10 @@ public abstract class ExecutionStrategy {
                         handleFetchingException(executionContext, parameters, field, fieldDef, argumentValues, environment, exception);
                         return null;
                     } else {
+                        if (result instanceof GraphQLError) {
+                            executionContext.addError((GraphQLError) result, parameters.path());
+                            return null;
+                        }
                         return result;
                     }
                 })
