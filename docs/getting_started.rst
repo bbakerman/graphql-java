@@ -21,7 +21,7 @@ Dependency:
 .. code-block:: groovy
 
     dependencies {
-      compile 'com.graphql-java:graphql-java:6.0'
+      compile 'com.graphql-java:graphql-java:8.0'
     }
 
 
