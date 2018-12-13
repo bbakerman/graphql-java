@@ -8,10 +8,15 @@ class AstSorterTest extends Specification {
     def "basic sorting works as expected"() {
         def query = '''
             query QZ {
-                field(z: "valz", x : "valx", y:"valy") {
+                fieldZ(z: "valz", x : "valx", y:"valy") {
                     subfieldz
                     subfieldx
-                    subfieldY
+                    subfieldy
+                }
+                fieldX(z: "valz", x : "valx", y:"valy") {
+                    subfieldz
+                    subfieldx
+                    subfieldy
                 }
             }
 
@@ -24,13 +29,34 @@ class AstSorterTest extends Specification {
             }
                     
         '''
+        def expectedQuery = '''
+            query QX {
+                field(x: "valx", y : "valy", z : "valz") {
+                    subfieldx
+                    subfieldy
+                    subfieldz
+                }
+            }
+
+            query QZ {
+                fieldZ(x: "valx", y : "valy", z : "valz") {
+                    subfieldx
+                    subfieldy
+                    subfieldz
+                }
+                fieldX(x: "valx", y : "valy", z : "valz") {
+                    subfieldx
+                    subfieldy
+                    subfieldz
+                }
+            }
+        '''
 
         def doc = TestUtil.parseQuery(query)
 
         when:
         def newDoc = new AstSorter().sortQuery(doc)
         then:
-        newDoc == null
-
+        AstPrinter.printAst(newDoc) == expectedQuery
     }
 }
